@@ -43,8 +43,8 @@ targets = [
 default = ["x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"]
 
 android-game-activity = ["winit-android/game-activity"]
-# Experimental Java-Looper runner. The native-activity feature remains enabled until the facade
-# switches fully to the new backend.
+# Experimental Java-Looper runner. The facade still compiles its legacy event-loop API, so
+# applications that need a pure Java Activity dependency should use `winit-android` directly.
 android-java-activity = ["winit-android/java-activity", "winit-android/native-activity"]
 android-native-activity = ["winit-android/native-activity"]
 mint = ["dpi/mint"]

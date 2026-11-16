@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
-use android_activity::input::{KeyMapChar, Keycode};
+use ndk::event::Keycode;
 use dpi::{PhysicalPosition, PhysicalSize};
 use jni::objects::JObject;
 use jni::Env;
@@ -16,8 +16,8 @@ use winit_core::event::{
 use winit_core::event_loop::{ActiveEventLoop as _, ControlFlow};
 use winit_core::text_input::{TextInputRequest, TextInputResponse, TextInputSessionId};
 
+use super::keycodes::{self, KeyMapChar};
 use super::window::{ActiveEventLoop, ImeCommand, JavaBridge, Shared, GLOBAL_WINDOW};
-use crate::keycodes;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -309,7 +309,7 @@ impl<A: ApplicationHandler> Runner<A> {
         unicode_without_modifiers: u32,
         repeat: bool,
     ) -> InputResponse {
-        let keycode = Keycode::from(keycode);
+        let keycode = Keycode::from(keycode as i32);
         let key_char = key_map_char(unicode);
         let key_without_modifiers = keycodes::to_logical(
             key_map_char(unicode_without_modifiers),

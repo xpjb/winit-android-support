@@ -72,39 +72,49 @@
 #![cfg(target_os = "android")]
 #![warn(clippy::exhaustive_enums)]
 
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 mod event_loop;
 #[cfg(feature = "java-activity")]
 pub mod java_activity;
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 mod keycodes;
 
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 use winit_core::event_loop::ActiveEventLoop as CoreActiveEventLoop;
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 use winit_core::window::Window as CoreWindow;
 
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 use self::activity::{AndroidApp, ConfigurationRef, Rect};
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 pub use crate::event_loop::{
     ActiveEventLoop, EventLoop, EventLoopProxy, PlatformSpecificEventLoopAttributes,
     PlatformSpecificWindowAttributes, Window,
 };
 
 /// Additional methods on [`EventLoop`] that are specific to Android.
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 pub trait EventLoopExtAndroid {
     /// Get the [`AndroidApp`] which was used to create this event loop.
     fn android_app(&self) -> &AndroidApp;
 }
 
 /// Additional methods on [`ActiveEventLoop`] that are specific to Android.
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 pub trait ActiveEventLoopExtAndroid {
     /// Get the [`AndroidApp`] which was used to create this event loop.
     fn android_app(&self) -> &AndroidApp;
 }
 
 /// Additional methods on [`Window`] that are specific to Android.
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 pub trait WindowExtAndroid {
     fn content_rect(&self) -> Rect;
 
     fn config(&self) -> ConfigurationRef;
 }
 
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 impl WindowExtAndroid for dyn CoreWindow + '_ {
     fn content_rect(&self) -> Rect {
         let window = self.cast_ref::<Window>().unwrap();
@@ -117,6 +127,7 @@ impl WindowExtAndroid for dyn CoreWindow + '_ {
     }
 }
 
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 impl ActiveEventLoopExtAndroid for dyn CoreActiveEventLoop + '_ {
     fn android_app(&self) -> &AndroidApp {
         let event_loop = self.cast_ref::<ActiveEventLoop>().unwrap();
@@ -124,6 +135,7 @@ impl ActiveEventLoopExtAndroid for dyn CoreActiveEventLoop + '_ {
     }
 }
 
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 pub trait EventLoopBuilderExtAndroid {
     /// Associates the [`AndroidApp`] that was passed to `android_main()` with the event loop
     ///
@@ -158,6 +170,7 @@ pub trait EventLoopBuilderExtAndroid {
 /// #[cfg(target_os = "android")]
 /// use winit::platform::android::activity::AndroidApp;
 /// ```
+#[cfg(any(feature = "game-activity", feature = "native-activity"))]
 pub mod activity {
     // We enable the `"native-activity"` feature just so that we can build the
     // docs, but it'll be very confusing for users to see the docs with that

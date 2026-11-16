@@ -5,6 +5,7 @@
 //! callbacks.
 
 mod entry;
+mod keycodes;
 mod runner;
 mod window;
 

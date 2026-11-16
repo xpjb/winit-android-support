@@ -9,9 +9,9 @@ rust-version.workspace = true
 version.workspace = true
 
 [features]
-game-activity = ["android-activity/game-activity"]
+game-activity = ["dep:android-activity", "android-activity/game-activity"]
 java-activity = ["dep:jni"]
-native-activity = ["android-activity/native-activity"]
+native-activity = ["dep:android-activity", "android-activity/native-activity"]
 serde = ["dep:serde", "bitflags/serde", "smol_str/serde", "dpi/serde", "winit-core/serde"]
 
 [dependencies]
@@ -25,7 +25,7 @@ winit-core.workspace = true
 
 # Platform-specific
 [target.'cfg(target_os = "android")'.dependencies]
-android-activity.workspace = true
+android-activity = { workspace = true, optional = true }
 jni = { workspace = true, optional = true }
 ndk.workspace = true
 

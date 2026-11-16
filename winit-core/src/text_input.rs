@@ -27,7 +27,7 @@ impl TextInputSessionId {
     }
 }
 
-/// A directional selection expressed as UTF-8 byte offsets in the application document.
+/// A directional selection expressed as UTF-16 code-unit offsets in the application document.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct TextSelection {
     /// The fixed end of the selection.
@@ -51,7 +51,7 @@ impl TextSelection {
 /// Current plain-text state relevant to a platform text input service.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TextInputState {
-    /// Document length in UTF-8 bytes.
+    /// Document length in UTF-16 code units.
     pub text_len: usize,
     /// Current directional selection.
     pub selection: TextSelection,
@@ -62,7 +62,7 @@ pub struct TextInputState {
 /// One replacement requested by the platform.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TextReplacement {
-    /// UTF-8 byte range in the application document before the edit.
+    /// UTF-16 code-unit range in the application document before the edit.
     pub range: Range<usize>,
     /// Replacement text.
     pub text: String,
@@ -85,7 +85,7 @@ pub struct TextInputEdit {
 /// A document excerpt returned to the platform.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TextSnapshot {
-    /// Global UTF-8 byte range represented by `text`.
+    /// Global UTF-16 code-unit range represented by `text`.
     pub range: Range<usize>,
     /// Plain text in `range`.
     pub text: String,
@@ -113,13 +113,15 @@ impl TextInputRect {
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum TextInputRequest {
-    /// Read a UTF-8 byte range from the focused document.
+    /// Read current document length, selection, and composition.
+    State,
+    /// Read a UTF-16 code-unit range from the focused document.
     Read { range: Range<usize> },
     /// Apply one atomic edit to the focused document.
     Apply(TextInputEdit),
     /// Return the surface rectangle covering a document range.
     RectForRange { range: Range<usize> },
-    /// Return the UTF-8 document byte offset nearest a surface position.
+    /// Return the UTF-16 document code-unit offset nearest a surface position.
     IndexForPoint { position: PhysicalPosition<f64> },
 }
 
@@ -139,6 +141,8 @@ pub enum TextInputApplyResult {
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum TextInputResponse {
+    /// State returned for [`TextInputRequest::State`].
+    State(TextInputState),
     /// Text returned for [`TextInputRequest::Read`].
     Text(TextSnapshot),
     /// Result returned for [`TextInputRequest::Apply`].

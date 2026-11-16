@@ -1255,6 +1255,7 @@ impl EventProcessor {
 
         let event = match event.detail as u32 {
             xlib::Button1 => WindowEvent::PointerButton {
+                timestamp: None,
                 device_id,
                 primary: true,
                 state,
@@ -1263,6 +1264,7 @@ impl EventProcessor {
                 is_macos_activation_click: false,
             },
             xlib::Button2 => WindowEvent::PointerButton {
+                timestamp: None,
                 device_id,
                 primary: true,
                 state,
@@ -1271,6 +1273,7 @@ impl EventProcessor {
                 is_macos_activation_click: false,
             },
             xlib::Button3 => WindowEvent::PointerButton {
+                timestamp: None,
                 device_id,
                 primary: true,
                 state,
@@ -1300,6 +1303,7 @@ impl EventProcessor {
             },
 
             x @ 8..37 => WindowEvent::PointerButton {
+                timestamp: None,
                 device_id,
                 primary: true,
                 state,
@@ -1310,6 +1314,7 @@ impl EventProcessor {
                 is_macos_activation_click: false,
             },
             x @ 37..=0xff => WindowEvent::PointerButton {
+                timestamp: None,
                 device_id,
                 primary: true,
                 state,
@@ -1351,6 +1356,7 @@ impl EventProcessor {
             let position = PhysicalPosition::new(event.event_x, event.event_y);
 
             let event = WindowEvent::PointerMoved {
+                timestamp: None,
                 device_id,
                 primary: true,
                 position,
@@ -1516,6 +1522,7 @@ impl EventProcessor {
             .map(|device| mkdid(device.attachment as xinput::DeviceId));
 
         let event = WindowEvent::PointerMoved {
+            timestamp: None,
             device_id,
             primary: true,
             position,
@@ -1587,6 +1594,7 @@ impl EventProcessor {
                 is_first_touch(&mut self.first_touch, &mut self.num_touch, id, phase);
             if is_first_touch {
                 let event = WindowEvent::PointerMoved {
+                    timestamp: None,
                     device_id: None,
                     primary: true,
                     position: position.cast(),
@@ -1608,6 +1616,7 @@ impl EventProcessor {
                     };
                     app.window_event(&self.target, window_id, event);
                     let event = WindowEvent::PointerButton {
+                        timestamp: None,
                         device_id,
                         primary: is_first_touch,
                         state: ElementState::Pressed,
@@ -1619,6 +1628,7 @@ impl EventProcessor {
                 },
                 xinput2::XI_TouchUpdate => {
                     let event = WindowEvent::PointerMoved {
+                        timestamp: None,
                         device_id,
                         primary: is_first_touch,
                         position,
@@ -1628,6 +1638,7 @@ impl EventProcessor {
                 },
                 xinput2::XI_TouchEnd => {
                     let event = WindowEvent::PointerButton {
+                        timestamp: None,
                         device_id,
                         primary: is_first_touch,
                         state: ElementState::Released,

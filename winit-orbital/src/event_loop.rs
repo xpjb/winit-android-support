@@ -441,6 +441,7 @@ impl EventLoop {
             EventOption::Mouse(MouseEvent { x, y }) => {
                 event_state.mouse_pos = (x, y);
                 app.window_event(window_target, window_id, event::WindowEvent::PointerMoved {
+                    timestamp: None,
                     device_id: None,
                     primary: true,
                     position: event_state.mouse_pos.into(),
@@ -455,6 +456,7 @@ impl EventLoop {
             EventOption::Button(ButtonEvent { left, middle, right }) => {
                 while let Some((button, state)) = event_state.mouse(left, middle, right) {
                     app.window_event(window_target, window_id, event::WindowEvent::PointerButton {
+                        timestamp: None,
                         device_id: None,
                         primary: true,
                         state,

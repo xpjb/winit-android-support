@@ -1,6 +1,6 @@
 //! End user application handling.
 
-use crate::event::{DeviceEvent, DeviceId, StartCause, WindowEvent};
+use crate::event::{DeviceEvent, DeviceId, KeyEvent, StartCause, WindowEvent};
 use crate::event_loop::ActiveEventLoop;
 use crate::text_input::{TextInputRequest, TextInputResponse, TextInputSessionId};
 use crate::window::WindowId;
@@ -14,6 +14,16 @@ pub enum BackResponse {
     /// The application consumed Back and the platform must not perform its default action.
     Handled,
     /// The platform should perform its default Back action.
+    SystemDefault,
+}
+
+/// The application's answer to a platform input request.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum InputResponse {
+    /// The application consumed the input.
+    Handled,
+    /// The platform should perform its default action.
     SystemDefault,
 }
 
@@ -350,7 +360,7 @@ pub trait ApplicationHandler {
     /// Synchronously answers a platform text-input request for the focused editor.
     ///
     /// Unlike [`window_event()`][Self::window_event], this callback is a request/response protocol:
-    /// the platform is blocked until the method returns. Text indices are UTF-8 byte offsets in the
+    /// the platform is blocked until the method returns. Text indices are UTF-16 code-unit offsets in the
     /// application's document. The application should return
     /// [`TextInputResponse::Unsupported`] for request kinds it does not implement.
     ///
@@ -366,6 +376,28 @@ pub trait ApplicationHandler {
     ) -> TextInputResponse {
         let _ = (event_loop, window_id, session_id, request);
         TextInputResponse::Unsupported
+    }
+
+    /// Synchronously dispatches a keyboard event and decides whether the platform may handle it.
+    ///
+    /// The default forwards the event to [`window_event()`][Self::window_event] and returns
+    /// [`InputResponse::Handled`], preserving Winit's historical behavior. Applications can
+    /// override this callback to return [`InputResponse::SystemDefault`] for keys such as volume
+    /// controls or platform navigation keys.
+    fn keyboard_input(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+        device_id: Option<DeviceId>,
+        event: KeyEvent,
+        is_synthetic: bool,
+    ) -> InputResponse {
+        self.window_event(
+            event_loop,
+            window_id,
+            WindowEvent::KeyboardInput { device_id, event, is_synthetic },
+        );
+        InputResponse::Handled
     }
 
     /// Synchronously decides whether the application consumes a platform Back request.
@@ -465,6 +497,24 @@ impl<A: ?Sized + ApplicationHandler> ApplicationHandler for &mut A {
     }
 
     #[inline]
+    fn keyboard_input(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+        device_id: Option<DeviceId>,
+        event: KeyEvent,
+        is_synthetic: bool,
+    ) -> InputResponse {
+        (**self).keyboard_input(
+            event_loop,
+            window_id,
+            device_id,
+            event,
+            is_synthetic,
+        )
+    }
+
+    #[inline]
     fn back_requested(
         &mut self,
         event_loop: &dyn ActiveEventLoop,
@@ -550,6 +600,24 @@ impl<A: ?Sized + ApplicationHandler> ApplicationHandler for Box<A> {
         request: TextInputRequest,
     ) -> TextInputResponse {
         (**self).text_input_request(event_loop, window_id, session_id, request)
+    }
+
+    #[inline]
+    fn keyboard_input(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+        device_id: Option<DeviceId>,
+        event: KeyEvent,
+        is_synthetic: bool,
+    ) -> InputResponse {
+        (**self).keyboard_input(
+            event_loop,
+            window_id,
+            device_id,
+            event,
+            is_synthetic,
+        )
     }
 
     #[inline]

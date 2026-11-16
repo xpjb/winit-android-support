@@ -3,6 +3,7 @@ use std::cell::LazyCell;
 use std::cmp::Ordering;
 use std::f64;
 use std::sync::{Arc, Mutex, Weak};
+use std::time::Duration;
 
 use dpi::{PhysicalPosition, PhysicalSize};
 #[cfg(feature = "serde")]
@@ -222,6 +223,12 @@ pub enum WindowEvent {
     PointerMoved {
         device_id: Option<DeviceId>,
 
+        /// Time of this sample on the platform's monotonic input clock.
+        ///
+        /// Historical/coalesced samples are emitted as individual `PointerMoved` events in
+        /// chronological order, each with its original timestamp.
+        timestamp: Option<Duration>,
+
         /// (x,y) coordinates in pixels relative to the top-left corner of the window. Because the
         /// range of this data is limited by the display area and it may have been
         /// transformed by the OS to implement effects such as pointer acceleration, it
@@ -321,6 +328,9 @@ pub enum WindowEvent {
     PointerButton {
         device_id: Option<DeviceId>,
         state: ElementState,
+
+        /// Time of this button transition on the platform's monotonic input clock.
+        timestamp: Option<Duration>,
 
         /// The position of the pointer when the button was pressed.
         ///
@@ -1727,6 +1737,7 @@ mod tests {
             with_window_event(DragLeft { id: dnd_data });
             with_window_event(Ime(Enabled));
             with_window_event(PointerMoved {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 position: (0, 0).into(),
@@ -1752,6 +1763,7 @@ mod tests {
                 source: event::ScrollSource::Unknown,
             });
             with_window_event(PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 state: event::ElementState::Pressed,
@@ -1760,6 +1772,7 @@ mod tests {
                 is_macos_activation_click: false,
             });
             with_window_event(PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 state: event::ElementState::Released,

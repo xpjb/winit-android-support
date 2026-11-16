@@ -67,6 +67,7 @@ impl TouchHandler for WinitState {
         );
         self.events_sink.push_window_event(
             WindowEvent::PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary,
                 state: ElementState::Pressed,
@@ -128,6 +129,7 @@ impl TouchHandler for WinitState {
 
         self.events_sink.push_window_event(
             WindowEvent::PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary,
                 state: ElementState::Released,
@@ -183,6 +185,7 @@ impl TouchHandler for WinitState {
 
         self.events_sink.push_window_event(
             WindowEvent::PointerMoved {
+                timestamp: None,
                 device_id: None,
                 primary,
                 position: touch_point.location.to_physical(scale_factor),

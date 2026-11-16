@@ -155,6 +155,7 @@ impl PointerHandler for WinitState {
                 PointerEventKind::Motion { .. } => {
                     self.events_sink.push_window_event(
                         WindowEvent::PointerMoved {
+                            timestamp: None,
                             primary: true,
                             device_id: None,
                             position,
@@ -182,6 +183,7 @@ impl PointerHandler for WinitState {
                     };
                     self.events_sink.push_window_event(
                         WindowEvent::PointerButton {
+                            timestamp: None,
                             primary: true,
                             device_id: None,
                             state,

@@ -1821,6 +1821,7 @@ unsafe fn public_window_callback_inner(
                 update_modifiers(window, userdata);
 
                 userdata.send_window_event(window, PointerMoved {
+                    timestamp: None,
                     device_id: None,
                     primary: true,
                     position,
@@ -1949,6 +1950,7 @@ unsafe fn public_window_callback_inner(
             let position = PhysicalPosition::new(x as f64, y as f64);
 
             userdata.send_window_event(window, PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 state: Pressed,
@@ -1979,6 +1981,7 @@ unsafe fn public_window_callback_inner(
             let position = PhysicalPosition::new(x as f64, y as f64);
 
             userdata.send_window_event(window, PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 state: Released,
@@ -2013,6 +2016,7 @@ unsafe fn public_window_callback_inner(
             let b = xbutton as u8 + MouseButton::Back as u8 - 1;
 
             userdata.send_window_event(window, PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 state: Pressed,
@@ -2043,6 +2047,7 @@ unsafe fn public_window_callback_inner(
             let b = xbutton as u8 + MouseButton::Back as u8 - 1;
 
             userdata.send_window_event(window, PointerButton {
+                timestamp: None,
                 device_id: None,
                 primary: true,
                 state: Released,
@@ -2104,6 +2109,7 @@ unsafe fn public_window_callback_inner(
                             kind: PointerKind::Touch(finger_id),
                         });
                         userdata.send_window_event(window, WindowEvent::PointerButton {
+                            timestamp: None,
                             device_id: None,
                             primary,
                             state: Pressed,
@@ -2113,6 +2119,7 @@ unsafe fn public_window_callback_inner(
                         });
                     } else if util::has_flag(input.dwFlags, TOUCHEVENTF_UP) {
                         userdata.send_window_event(window, WindowEvent::PointerButton {
+                            timestamp: None,
                             device_id: None,
                             primary,
                             state: Released,
@@ -2128,6 +2135,7 @@ unsafe fn public_window_callback_inner(
                         });
                     } else if util::has_flag(input.dwFlags, TOUCHEVENTF_MOVE) {
                         userdata.send_window_event(window, WindowEvent::PointerMoved {
+                            timestamp: None,
                             device_id: None,
                             primary,
                             position,
@@ -2275,6 +2283,7 @@ unsafe fn public_window_callback_inner(
                             });
 
                             userdata.send_window_event(window, WindowEvent::PointerButton {
+                                timestamp: None,
                                 device_id: None,
                                 primary,
                                 state: Pressed,
@@ -2284,6 +2293,7 @@ unsafe fn public_window_callback_inner(
                             });
                         } else {
                             userdata.send_window_event(window, WindowEvent::PointerButton {
+                                timestamp: None,
                                 device_id: None,
                                 primary,
                                 state: Released,
@@ -2312,6 +2322,7 @@ unsafe fn public_window_callback_inner(
                         };
 
                         userdata.send_window_event(window, WindowEvent::PointerMoved {
+                            timestamp: None,
                             device_id: None,
                             primary,
                             position,

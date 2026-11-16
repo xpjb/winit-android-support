@@ -11,7 +11,7 @@ use android_activity::{
 };
 use dpi::{PhysicalInsets, PhysicalPosition, PhysicalSize, Position, Size};
 use tracing::{debug, trace, warn};
-use winit_core::application::ApplicationHandler;
+use winit_core::application::{ApplicationHandler, InputResponse};
 use winit_core::cursor::{Cursor, CustomCursor, CustomCursorSource};
 use winit_core::error::{
     CreateWindowError, CustomCursorError, EventLoopError, NotSupportedError, RequestError,
@@ -325,6 +325,7 @@ impl EventLoop {
             InputEvent::MotionEvent(motion_event) => {
                 let device_id = Some(DeviceId::from_raw(motion_event.device_id() as i64));
                 let action = motion_event.action();
+                let timestamp = Some(Duration::from_nanos(motion_event.event_time().max(0) as u64));
 
                 let pointers: Option<
                     Box<dyn Iterator<Item = android_activity::input::Pointer<'_>>>,
@@ -376,6 +377,7 @@ impl EventLoop {
                                 device_id,
                                 primary,
                                 state: event::ElementState::Pressed,
+                                timestamp,
                                 position,
                                 button: match tool_type {
                                     android_activity::input::ToolType::Finger => {
@@ -393,6 +395,7 @@ impl EventLoop {
                             let primary = self.primary_pointer == Some(finger_id);
                             let event = event::WindowEvent::PointerMoved {
                                 device_id,
+                                timestamp,
                                 primary,
                                 position,
                                 source: match tool_type {
@@ -420,6 +423,7 @@ impl EventLoop {
                                     device_id,
                                     primary,
                                     state: event::ElementState::Released,
+                                    timestamp,
                                     position,
                                     button: match tool_type {
                                         android_activity::input::ToolType::Finger => {
@@ -484,22 +488,27 @@ impl EventLoop {
                             None
                         };
 
-                        let event = event::WindowEvent::KeyboardInput {
-                            device_id: Some(DeviceId::from_raw(key.device_id() as i64)),
-                            event: event::KeyEvent {
-                                state,
-                                physical_key: keycodes::to_physical_key(keycode),
-                                logical_key,
-                                location: keycodes::to_location(keycode),
-                                repeat: key.repeat_count() > 0,
-                                text: text.clone(),
-                                text_with_all_modifiers: text,
-                                key_without_modifiers: keycodes::to_logical(key_char, keycode),
-                            },
-                            is_synthetic: false,
+                        let event = event::KeyEvent {
+                            state,
+                            physical_key: keycodes::to_physical_key(keycode),
+                            logical_key,
+                            location: keycodes::to_location(keycode),
+                            repeat: key.repeat_count() > 0,
+                            text: text.clone(),
+                            text_with_all_modifiers: text,
+                            key_without_modifiers: keycodes::to_logical(key_char, keycode),
                         };
 
-                        app.window_event(&self.window_target, GLOBAL_WINDOW, event);
+                        if app.keyboard_input(
+                            &self.window_target,
+                            GLOBAL_WINDOW,
+                            Some(DeviceId::from_raw(key.device_id() as i64)),
+                            event,
+                            false,
+                        ) == InputResponse::SystemDefault
+                        {
+                            input_status = InputStatus::Unhandled;
+                        }
                     },
                 }
             },

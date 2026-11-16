@@ -22,8 +22,9 @@ This is intentionally an opinionated experiment. It is not a compatibility wrapp
    is on the stack.
 5. Android text input queries and edits target the application's real document. There is no hidden
    `EditText` text mirror and no bounded surrounding-text viewport.
-6. Text positions crossing the public Winit boundary are UTF-8 byte offsets. The Android bridge
-   converts UTF-16 code-unit offsets at the JNI edge.
+6. Text positions crossing the public Winit boundary are UTF-16 code-unit offsets, matching
+   Android, Windows, and Apple text-service APIs. Applications convert at their document boundary;
+   Ropey provides logarithmic UTF-16/code-point conversion without copying the document.
 7. A text session ID rejects callbacks from obsolete `InputConnection` objects. There is no
    per-edit generation or revision protocol when all editor access is serialized on one thread.
 8. Surface creation/destruction is explicit. A destroyed Android `Surface` invalidates the WGPU
@@ -80,9 +81,9 @@ callback still occurs.
 - range-to-rectangle geometry;
 - point-to-document-index hit testing.
 
-The Android `Editable`/`InputConnection` bridge will translate between Android UTF-16 code units and
-application UTF-8 bytes. Java object spans remain bridge-owned metadata; the Rust document remains
-the source of truth for text, selection, and composition.
+The Android `InputConnection` uses the same UTF-16 code-unit coordinates as the synchronous Rust
+text client. Java object spans remain bridge-owned metadata; the Rust document remains the source of
+truth for text, selection, and composition.
 
 ## Delivery order
 

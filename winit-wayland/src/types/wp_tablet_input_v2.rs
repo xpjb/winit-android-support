@@ -211,6 +211,7 @@ impl Dispatch2<ZwpTabletToolV2, WinitState> for TabletToolData {
                             kind: PointerKind::TabletTool(kind),
                         },
                         TabletEvent::Moved => WindowEvent::PointerMoved {
+                            timestamp: None,
                             device_id: None,
                             position,
                             primary: true,
@@ -226,6 +227,7 @@ impl Dispatch2<ZwpTabletToolV2, WinitState> for TabletToolData {
                             }
 
                             WindowEvent::PointerButton {
+                                timestamp: None,
                                 device_id: None,
                                 state,
                                 position,

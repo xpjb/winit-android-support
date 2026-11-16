@@ -263,6 +263,7 @@ impl ActiveEventLoop {
                             modifiers.into_iter().chain(iter::once(Event::WindowEvent {
                                 window_id,
                                 event: WindowEvent::PointerMoved {
+                                    timestamp: None,
                                     device_id,
                                     primary,
                                     position,
@@ -291,6 +292,7 @@ impl ActiveEventLoop {
                     runner.send_events(modifiers.into_iter().chain([Event::WindowEvent {
                         window_id,
                         event: WindowEvent::PointerButton {
+                            timestamp: None,
                             device_id,
                             primary,
                             state,
@@ -319,6 +321,7 @@ impl ActiveEventLoop {
                 runner.send_events(modifiers.into_iter().chain(iter::once(Event::WindowEvent {
                     window_id,
                     event: WindowEvent::PointerButton {
+                        timestamp: None,
                         device_id,
                         primary,
                         state: ElementState::Pressed,
@@ -348,6 +351,7 @@ impl ActiveEventLoop {
                 runner.send_events(modifiers.into_iter().chain(iter::once(Event::WindowEvent {
                     window_id,
                     event: WindowEvent::PointerButton {
+                        timestamp: None,
                         device_id,
                         primary,
                         state: ElementState::Released,

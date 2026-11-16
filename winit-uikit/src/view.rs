@@ -557,6 +557,7 @@ impl WinitView {
                     touch_events.push(EventWrapper::Window {
                         window_id,
                         event: WindowEvent::PointerButton {
+                            timestamp: None,
                             device_id: None,
                             primary,
                             state: ElementState::Pressed,
@@ -592,6 +593,7 @@ impl WinitView {
                     touch_events.push(EventWrapper::Window {
                         window_id,
                         event: WindowEvent::PointerMoved {
+                            timestamp: None,
                             device_id: None,
                             primary,
                             position,
@@ -616,6 +618,7 @@ impl WinitView {
                         touch_events.push(EventWrapper::Window {
                             window_id,
                             event: WindowEvent::PointerButton {
+                                timestamp: None,
                                 device_id: None,
                                 primary,
                                 state: ElementState::Released,

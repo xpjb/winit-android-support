@@ -1,4 +1,5 @@
 use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+use std::path::PathBuf;
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
@@ -54,10 +55,11 @@ impl<A: ApplicationHandler> Runner<A> {
     pub fn new(
         env: &mut Env<'_>,
         activity: JObject<'_>,
+        files_dir: PathBuf,
         app: A,
     ) -> jni::errors::Result<Self> {
         let bridge = JavaBridge::new(env, activity)?;
-        let shared = Shared::new(bridge);
+        let shared = Shared::new(bridge, files_dir);
         let mut runner = Self {
             app: Some(app),
             event_loop: ActiveEventLoop::new(shared),

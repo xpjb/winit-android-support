@@ -16,7 +16,7 @@ pub use dpi as __dpi;
 pub use winit_core as __winit_core;
 pub use jni;
 pub use runner::{PointerAction, PointerSample, Runner};
-pub use window::{ImeCommand, WindowExtJavaActivity};
+pub use window::{ActiveEventLoopExtJavaActivity, ImeCommand, WindowExtJavaActivity};
 
 /// Exports the JNI entry points consumed by the bundled `WinitActivity` Java class.
 ///
@@ -75,10 +75,12 @@ macro_rules! java_activity_entry {
                 mut unowned_env: EnvUnowned<'local>,
                 _class: JClass<'local>,
                 activity: JObject<'local>,
+                files_dir: JString<'local>,
             ) -> jlong {
                 unowned_env
                     .with_env(|env| -> Result<jlong, jni::errors::Error> {
-                        let runner = Runner::new(env, activity, $factory)?;
+                        let files_dir = std::path::PathBuf::from(files_dir.try_to_string(env)?);
+                        let runner = Runner::new(env, activity, files_dir, $factory)?;
                         Ok($crate::java_activity::runner_into_handle(runner))
                     })
                     .resolve::<ThrowRuntimeExAndDefault>()

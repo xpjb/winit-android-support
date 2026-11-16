@@ -1,5 +1,6 @@
 use std::ffi::c_void;
 use std::fmt;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -13,7 +14,10 @@ use winit_core::cursor::{Cursor, CustomCursor, CustomCursorSource};
 use winit_core::error::{
     CreateWindowError, CustomCursorError, NotSupportedError, RequestError,
 };
-use winit_core::event_loop::{EventLoopProxy as CoreEventLoopProxy, OwnedDisplayHandle};
+use winit_core::event_loop::{
+    ActiveEventLoop as CoreActiveEventLoop, EventLoopProxy as CoreEventLoopProxy,
+    OwnedDisplayHandle,
+};
 use winit_core::monitor::{Fullscreen, MonitorHandle};
 use winit_core::text_input::TextInputSessionId;
 use winit_core::window::{
@@ -126,6 +130,7 @@ impl Default for ImeState {
 
 pub(super) struct Shared {
     bridge: JavaBridge,
+    files_dir: PathBuf,
     callback_active: AtomicBool,
     work_pending: AtomicBool,
     redraw_pending: AtomicBool,
@@ -157,9 +162,10 @@ impl fmt::Debug for Shared {
 }
 
 impl Shared {
-    pub(super) fn new(bridge: JavaBridge) -> Arc<Self> {
+    pub(super) fn new(bridge: JavaBridge, files_dir: PathBuf) -> Arc<Self> {
         Arc::new(Self {
             bridge,
+            files_dir,
             callback_active: AtomicBool::new(false),
             work_pending: AtomicBool::new(false),
             redraw_pending: AtomicBool::new(false),
@@ -179,6 +185,10 @@ impl Shared {
             ime_command: Mutex::new(None),
             next_session: AtomicU64::new(1),
         })
+    }
+
+    pub(super) fn files_dir(&self) -> &Path {
+        &self.files_dir
     }
 
     pub(super) fn set_callback_active(&self, active: bool) {
@@ -679,6 +689,20 @@ impl CoreWindow for Window {
 
     fn rwh_06_window_handle(&self) -> &dyn rwh_06::HasWindowHandle {
         self
+    }
+}
+
+pub trait ActiveEventLoopExtJavaActivity {
+    /// Returns the Activity's private persistent files directory.
+    fn files_dir(&self) -> &Path;
+}
+
+impl ActiveEventLoopExtJavaActivity for dyn CoreActiveEventLoop + '_ {
+    fn files_dir(&self) -> &Path {
+        let event_loop = self
+            .cast_ref::<ActiveEventLoop>()
+            .expect("event loop is not a Java-Activity Android event loop");
+        event_loop.shared.files_dir()
     }
 }
 

@@ -39,14 +39,13 @@
 //! crate-type = ["cdylib"]
 //! ```
 //!
-//! All Android applications are based on an `Activity` subclass, and the
-//! `android-activity` crate is designed to support different choices for this base
-//! class. Your application _must_ specify the base class it needs via a feature flag:
+//! All Android applications are based on an `Activity` subclass. Select one backend feature:
 //!
 //! | Base Class       | Feature Flag      |  Notes  |
 //! | :--------------: | :---------------: | :-----: |
-//! | `NativeActivity` | `android-native-activity` | Built-in to Android - it is possible to use without compiling any Java or Kotlin code. Java or Kotlin code may be needed to subclass `NativeActivity` to access some platform features. It does not derive from the [`AndroidAppCompat`] base class.|
-//! | [`GameActivity`] | `android-game-activity`   | Derives from [`AndroidAppCompat`], a defacto standard `Activity` base class that helps support a wider range of Android versions. Requires a build system that can compile Java or Kotlin and fetch Android dependencies from a [Maven repository][agdk_jetpack] (or link with an embedded [release][agdk_releases] of [`GameActivity`]) |
+//! | Regular Java `Activity` | `java-activity` | Experimental UI-Looper runner. Compiles the included Java sources and does not link `android-activity`. |
+//! | `NativeActivity` | `native-activity` | Built-in to Android - it is possible to use without compiling any Java or Kotlin code. Java or Kotlin code may be needed to subclass `NativeActivity` to access some platform features. It does not derive from the [`AndroidAppCompat`] base class.|
+//! | [`GameActivity`] | `game-activity`   | Derives from [`AndroidAppCompat`], a defacto standard `Activity` base class that helps support a wider range of Android versions. Requires a build system that can compile Java or Kotlin and fetch Android dependencies from a [Maven repository][agdk_jetpack] (or link with an embedded [release][agdk_releases] of [`GameActivity`]) |
 //!
 //! [`GameActivity`]: https://developer.android.com/games/agdk/game-activity
 //! [`GameTextInput`]: https://developer.android.com/games/agdk/add-support-for-text-input

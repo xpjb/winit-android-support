@@ -10,7 +10,10 @@ application loop on the `NativeActivity` worker thread. Android framework callba
 synchronous entries into Rust. Java owns the infinite event loop; Rust never starts one.
 
 This is intentionally an opinionated experiment. It is not a compatibility wrapper around
-`NativeActivity` or `android-activity`.
+`NativeActivity` or `android-activity`. The pure backend lives in `winit-android` behind its
+`java-activity` feature; the top-level facade still compiles the legacy event-loop API during this
+experiment, so integrations that must avoid `android-activity` use `winit-core` plus
+`winit-android` directly.
 
 ## Hard invariants
 
@@ -43,7 +46,7 @@ entry calls a bounded native function:
 - `nativeStart` / `nativeResume` / `nativePause` / `nativeStop` / `nativeDestroy`
 - `nativeSurfaceCreated` / `nativeSurfaceChanged` / `nativeSurfaceDestroyed`
 - `nativeFrame`
-- `nativePointerBatch`
+- `nativePointer` (called once for every current or historical sample)
 - `nativeKey`
 - `nativeBack` -> handled/default
 - synchronous text request functions -> direct answers

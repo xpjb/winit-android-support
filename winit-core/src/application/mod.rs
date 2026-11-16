@@ -2,9 +2,20 @@
 
 use crate::event::{DeviceEvent, DeviceId, StartCause, WindowEvent};
 use crate::event_loop::ActiveEventLoop;
+use crate::text_input::{TextInputRequest, TextInputResponse, TextInputSessionId};
 use crate::window::WindowId;
 
 pub mod macos;
+
+/// The application's answer to a platform Back request.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum BackResponse {
+    /// The application consumed Back and the platform must not perform its default action.
+    Handled,
+    /// The platform should perform its default Back action.
+    SystemDefault,
+}
 
 /// The handler of application-level events.
 pub trait ApplicationHandler {
@@ -336,6 +347,41 @@ pub trait ApplicationHandler {
         let _ = event_loop;
     }
 
+    /// Synchronously answers a platform text-input request for the focused editor.
+    ///
+    /// Unlike [`window_event()`][Self::window_event], this callback is a request/response protocol:
+    /// the platform is blocked until the method returns. Text indices are UTF-8 byte offsets in the
+    /// application's document. The application should return
+    /// [`TextInputResponse::Unsupported`] for request kinds it does not implement.
+    ///
+    /// Backend implementations must serialize this callback with all other application callbacks.
+    /// Platform operations requested from inside this callback must be deferred until after the
+    /// callback returns, so they cannot synchronously reenter the same `ApplicationHandler` borrow.
+    fn text_input_request(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+        session_id: TextInputSessionId,
+        request: TextInputRequest,
+    ) -> TextInputResponse {
+        let _ = (event_loop, window_id, session_id, request);
+        TextInputResponse::Unsupported
+    }
+
+    /// Synchronously decides whether the application consumes a platform Back request.
+    ///
+    /// Android back dispatch is bidirectional: returning [`BackResponse::Handled`] prevents the
+    /// Activity's default back action. The default preserves existing Winit behavior by allowing
+    /// the platform to handle Back.
+    fn back_requested(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+    ) -> BackResponse {
+        let _ = (event_loop, window_id);
+        BackResponse::SystemDefault
+    }
+
     /// The macOS-specific handler.
     ///
     /// The return value from this should not change at runtime.
@@ -408,6 +454,26 @@ impl<A: ?Sized + ApplicationHandler> ApplicationHandler for &mut A {
     }
 
     #[inline]
+    fn text_input_request(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+        session_id: TextInputSessionId,
+        request: TextInputRequest,
+    ) -> TextInputResponse {
+        (**self).text_input_request(event_loop, window_id, session_id, request)
+    }
+
+    #[inline]
+    fn back_requested(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+    ) -> BackResponse {
+        (**self).back_requested(event_loop, window_id)
+    }
+
+    #[inline]
     fn macos_handler(&mut self) -> Option<&mut dyn macos::ApplicationHandlerExtMacOS> {
         (**self).macos_handler()
     }
@@ -473,6 +539,26 @@ impl<A: ?Sized + ApplicationHandler> ApplicationHandler for Box<A> {
     #[inline]
     fn memory_warning(&mut self, event_loop: &dyn ActiveEventLoop) {
         (**self).memory_warning(event_loop);
+    }
+
+    #[inline]
+    fn text_input_request(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+        session_id: TextInputSessionId,
+        request: TextInputRequest,
+    ) -> TextInputResponse {
+        (**self).text_input_request(event_loop, window_id, session_id, request)
+    }
+
+    #[inline]
+    fn back_requested(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window_id: WindowId,
+    ) -> BackResponse {
+        (**self).back_requested(event_loop, window_id)
     }
 
     #[inline]

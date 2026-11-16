@@ -303,7 +303,7 @@ pub use rwh_06 as raw_window_handle;
 pub mod changelog;
 pub mod event_loop;
 pub use winit_core::{
-    application, cursor, data_transfer, error, event, icon, keyboard, monitor, window,
+    application, cursor, data_transfer, error, event, icon, keyboard, monitor, text_input, window,
 };
 #[macro_use]
 mod os_error;

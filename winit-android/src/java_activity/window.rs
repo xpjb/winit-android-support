@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -21,9 +22,9 @@ use winit_core::event_loop::{
 use winit_core::monitor::{Fullscreen, MonitorHandle};
 use winit_core::text_input::TextInputSessionId;
 use winit_core::window::{
-    self, CursorGrabMode, ImeCapabilities, ImeHint, ImePurpose, ImeRequest, ImeRequestError,
-    ResizeDirection, Theme, Window as CoreWindow, WindowAttributes, WindowButtons, WindowId,
-    WindowLevel,
+    self, CursorGrabMode, ImeCapabilities, ImeHint, ImePurpose, ImeRequest, ImeRequestData,
+    ImeRequestError, ResizeDirection, Theme, Window as CoreWindow, WindowAttributes, WindowButtons,
+    WindowId, WindowLevel,
 };
 
 pub(super) const GLOBAL_WINDOW: WindowId = WindowId::from_raw(0);
@@ -60,6 +61,30 @@ impl JavaBridge {
     }
 }
 
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ImeCursorArea {
+    left: i64,
+    top: i64,
+    right: i64,
+    bottom: i64,
+}
+
+impl ImeCursorArea {
+    fn from_request(position: Position, size: Size, scale_factor: f64) -> Self {
+        let position: PhysicalPosition<f64> = position.to_physical(scale_factor);
+        let size: PhysicalSize<f64> = size.to_physical(scale_factor);
+        let left = position.x.floor() as i64;
+        let top = position.y.floor() as i64;
+        Self {
+            left,
+            top,
+            right: (position.x + size.width.max(1.0)).ceil() as i64,
+            bottom: (position.y + size.height.max(1.0)).ceil() as i64,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ImeCommand {
@@ -67,25 +92,53 @@ pub enum ImeCommand {
         session_id: TextInputSessionId,
         hint: ImeHint,
         purpose: ImePurpose,
+        cursor_area: ImeCursorArea,
     },
     Update {
         session_id: TextInputSessionId,
         hint: ImeHint,
         purpose: ImePurpose,
+        cursor_area: ImeCursorArea,
     },
-    Disable { session_id: TextInputSessionId },
+    Disable {
+        session_id: TextInputSessionId,
+    },
+    ShowTextMenu {
+        session_id: TextInputSessionId,
+    },
+    SelectionHaptic,
+    MoveTaskToBack,
 }
 
 impl ImeCommand {
-    pub fn into_wire(self) -> [i64; 4] {
+    pub fn into_wire(self) -> [i64; 8] {
         match self {
-            Self::Enable { session_id, hint, purpose } => {
-                [1, session_id.into_raw() as i64, hint.bits() as i64, purpose_code(purpose)]
+            Self::Enable { session_id, hint, purpose, cursor_area } => [
+                1,
+                session_id.into_raw() as i64,
+                hint.bits() as i64,
+                purpose_code(purpose),
+                cursor_area.left,
+                cursor_area.top,
+                cursor_area.right,
+                cursor_area.bottom,
+            ],
+            Self::Update { session_id, hint, purpose, cursor_area } => [
+                2,
+                session_id.into_raw() as i64,
+                hint.bits() as i64,
+                purpose_code(purpose),
+                cursor_area.left,
+                cursor_area.top,
+                cursor_area.right,
+                cursor_area.bottom,
+            ],
+            Self::Disable { session_id } => [3, session_id.into_raw() as i64, 0, 0, 0, 0, 0, 0],
+            Self::ShowTextMenu { session_id } => {
+                [4, session_id.into_raw() as i64, 0, 0, 0, 0, 0, 0]
             },
-            Self::Update { session_id, hint, purpose } => {
-                [2, session_id.into_raw() as i64, hint.bits() as i64, purpose_code(purpose)]
-            },
-            Self::Disable { session_id } => [3, session_id.into_raw() as i64, 0, 0],
+            Self::SelectionHaptic => [5, 0, 0, 0, 0, 0, 0, 0],
+            Self::MoveTaskToBack => [6, 0, 0, 0, 0, 0, 0, 0],
         }
     }
 }
@@ -114,6 +167,7 @@ struct ImeState {
     capabilities: Option<ImeCapabilities>,
     hint: ImeHint,
     purpose: ImePurpose,
+    cursor_area: ImeCursorArea,
 }
 
 impl Default for ImeState {
@@ -124,7 +178,18 @@ impl Default for ImeState {
             capabilities: None,
             hint: ImeHint::NONE,
             purpose: ImePurpose::Normal,
+            cursor_area: ImeCursorArea::default(),
         }
+    }
+}
+
+fn update_ime_state(state: &mut ImeState, request: ImeRequestData, scale_factor: f64) {
+    if let Some((hint, purpose)) = request.hint_and_purpose {
+        state.hint = hint;
+        state.purpose = purpose;
+    }
+    if let Some((position, size)) = request.cursor_area {
+        state.cursor_area = ImeCursorArea::from_request(position, size, scale_factor);
     }
 }
 
@@ -144,10 +209,11 @@ pub(super) struct Shared {
     inset_top: AtomicU32,
     inset_right: AtomicU32,
     inset_bottom: AtomicU32,
+    keyboard_visible: AtomicBool,
     focused: AtomicBool,
     title: Mutex<String>,
     ime: Mutex<ImeState>,
-    ime_command: Mutex<Option<ImeCommand>>,
+    ime_commands: Mutex<VecDeque<ImeCommand>>,
     next_session: AtomicU64,
 }
 
@@ -179,10 +245,11 @@ impl Shared {
             inset_top: AtomicU32::new(0),
             inset_right: AtomicU32::new(0),
             inset_bottom: AtomicU32::new(0),
+            keyboard_visible: AtomicBool::new(false),
             focused: AtomicBool::new(false),
             title: Mutex::new(String::new()),
             ime: Mutex::new(ImeState::default()),
-            ime_command: Mutex::new(None),
+            ime_commands: Mutex::new(VecDeque::new()),
             next_session: AtomicU64::new(1),
         })
     }
@@ -268,11 +335,23 @@ impl Shared {
         f64::from_bits(self.scale_factor_bits.load(Ordering::Acquire))
     }
 
-    pub(super) fn set_insets(&self, left: u32, top: u32, right: u32, bottom: u32) {
+    pub(super) fn set_insets(
+        &self,
+        left: u32,
+        top: u32,
+        right: u32,
+        bottom: u32,
+        keyboard_visible: bool,
+    ) {
         self.inset_left.store(left, Ordering::Release);
         self.inset_top.store(top, Ordering::Release);
         self.inset_right.store(right, Ordering::Release);
         self.inset_bottom.store(bottom, Ordering::Release);
+        self.keyboard_visible.store(keyboard_visible, Ordering::Release);
+    }
+
+    pub(super) fn keyboard_visible(&self) -> bool {
+        self.keyboard_visible.load(Ordering::Acquire)
     }
 
     pub(super) fn set_focused(&self, focused: bool) {
@@ -280,11 +359,11 @@ impl Shared {
     }
 
     pub(super) fn take_ime_command(&self) -> Option<ImeCommand> {
-        self.ime_command.lock().unwrap().take()
+        self.ime_commands.lock().unwrap().pop_front()
     }
 
     fn queue_ime_command(&self, command: ImeCommand) {
-        *self.ime_command.lock().unwrap() = Some(command);
+        self.ime_commands.lock().unwrap().push_back(command);
         self.request_work();
     }
 }
@@ -416,6 +495,24 @@ impl Window {
 
     fn set_text_input_session(&self, session_id: TextInputSessionId) {
         self.shared.ime.lock().unwrap().configured_session = Some(session_id);
+    }
+
+    fn show_text_menu(&self) -> bool {
+        let session_id = self.shared.ime.lock().unwrap().active_session;
+        if let Some(session_id) = session_id {
+            self.shared.queue_ime_command(ImeCommand::ShowTextMenu { session_id });
+            true
+        } else {
+            false
+        }
+    }
+
+    fn selection_haptic(&self) {
+        self.shared.queue_ime_command(ImeCommand::SelectionHaptic);
+    }
+
+    fn move_task_to_back(&self) {
+        self.shared.queue_ime_command(ImeCommand::MoveTaskToBack);
     }
 
     fn raw_window_handle(&self) -> Result<rwh_06::RawWindowHandle, rwh_06::HandleError> {
@@ -577,10 +674,7 @@ impl CoreWindow for Window {
                     return Err(ImeRequestError::AlreadyEnabled);
                 }
                 let (capabilities, request_data) = enable.into_raw();
-                if let Some((hint, purpose)) = request_data.hint_and_purpose {
-                    state.hint = hint;
-                    state.purpose = purpose;
-                }
+                update_ime_state(&mut state, request_data, self.shared.scale_factor());
                 let session_id = state.configured_session.unwrap_or_else(|| {
                     TextInputSessionId::from_raw(
                         self.shared.next_session.fetch_add(1, Ordering::Relaxed),
@@ -592,20 +686,19 @@ impl CoreWindow for Window {
                     session_id,
                     hint: state.hint,
                     purpose: state.purpose,
+                    cursor_area: state.cursor_area,
                 });
             },
             ImeRequest::Update(request_data) => {
                 let Some(session_id) = state.active_session else {
                     return Err(ImeRequestError::NotEnabled);
                 };
-                if let Some((hint, purpose)) = request_data.hint_and_purpose {
-                    state.hint = hint;
-                    state.purpose = purpose;
-                }
+                update_ime_state(&mut state, request_data, self.shared.scale_factor());
                 self.shared.queue_ime_command(ImeCommand::Update {
                     session_id,
                     hint: state.hint,
                     purpose: state.purpose,
+                    cursor_area: state.cursor_area,
                 });
             },
             ImeRequest::Disable => {
@@ -631,6 +724,7 @@ impl CoreWindow for Window {
                 session_id,
                 hint: state.hint,
                 purpose,
+                cursor_area: state.cursor_area,
             });
         }
     }
@@ -709,11 +803,48 @@ impl ActiveEventLoopExtJavaActivity for dyn CoreActiveEventLoop + '_ {
 pub trait WindowExtJavaActivity {
     /// Sets the application-owned ID to attach to the next enabled text-input connection.
     fn set_text_input_session(&self, session_id: TextInputSessionId);
+
+    /// Returns whether Android currently reports the software keyboard as visible.
+    fn keyboard_visible(&self) -> bool;
+
+    /// Requests Android's floating text selection toolbar for the active text session.
+    fn show_text_menu(&self) -> bool;
+
+    /// Performs Android's standard long-press selection haptic.
+    fn selection_haptic(&self);
+
+    /// Moves the Activity task behind the current foreground task.
+    fn move_task_to_back(&self);
 }
 
 impl WindowExtJavaActivity for dyn CoreWindow + '_ {
     fn set_text_input_session(&self, session_id: TextInputSessionId) {
-        let window = self.cast_ref::<Window>().expect("window is not a Java-Activity Android window");
+        let window =
+            self.cast_ref::<Window>().expect("window is not a Java-Activity Android window");
         window.set_text_input_session(session_id);
+    }
+
+    fn keyboard_visible(&self) -> bool {
+        let window =
+            self.cast_ref::<Window>().expect("window is not a Java-Activity Android window");
+        window.shared.keyboard_visible()
+    }
+
+    fn show_text_menu(&self) -> bool {
+        let window =
+            self.cast_ref::<Window>().expect("window is not a Java-Activity Android window");
+        window.show_text_menu()
+    }
+
+    fn selection_haptic(&self) {
+        let window =
+            self.cast_ref::<Window>().expect("window is not a Java-Activity Android window");
+        window.selection_haptic();
+    }
+
+    fn move_task_to_back(&self) {
+        let window =
+            self.cast_ref::<Window>().expect("window is not a Java-Activity Android window");
+        window.move_task_to_back();
     }
 }

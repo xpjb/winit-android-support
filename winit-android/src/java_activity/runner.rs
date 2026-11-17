@@ -204,8 +204,17 @@ impl<A: ApplicationHandler> Runner<A> {
         self.event_loop.shared.clear_surface();
     }
 
-    pub fn set_insets(&mut self, left: u32, top: u32, right: u32, bottom: u32) {
-        self.event_loop.shared.set_insets(left, top, right, bottom);
+    pub fn set_insets(
+        &mut self,
+        left: u32,
+        top: u32,
+        right: u32,
+        bottom: u32,
+        keyboard_visible: bool,
+    ) {
+        self.event_loop
+            .shared
+            .set_insets(left, top, right, bottom, keyboard_visible);
         self.event_loop.shared.request_redraw();
     }
 

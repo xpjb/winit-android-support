@@ -220,6 +220,7 @@ macro_rules! java_activity_entry {
                 top: jint,
                 right: jint,
                 bottom: jint,
+                keyboard_visible: jboolean,
             ) {
                 unowned_env
                     .with_env(|_env| -> Result<(), jni::errors::Error> {
@@ -231,6 +232,7 @@ macro_rules! java_activity_entry {
                             top.max(0) as u32,
                             right.max(0) as u32,
                             bottom.max(0) as u32,
+                            keyboard_visible != JNI_FALSE,
                         );
                         Ok(())
                     })

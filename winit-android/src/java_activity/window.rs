@@ -591,10 +591,10 @@ impl CoreWindow for Window {
 
     fn safe_area(&self) -> PhysicalInsets<u32> {
         PhysicalInsets::new(
-            self.shared.inset_left.load(Ordering::Acquire),
             self.shared.inset_top.load(Ordering::Acquire),
-            self.shared.inset_right.load(Ordering::Acquire),
+            self.shared.inset_left.load(Ordering::Acquire),
             self.shared.inset_bottom.load(Ordering::Acquire),
+            self.shared.inset_right.load(Ordering::Acquire),
         )
     }
 
